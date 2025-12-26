@@ -74,5 +74,7 @@
 
 <!-- Avatar -->
 {#if avatarUrl}
-	<AvatarLoader url={avatarUrl} {animationIndex} {onAnimationsLoaded} {onSkeletonLoaded} />
+        {#key avatarUrl}
+                <AvatarLoader url={avatarUrl} {animationIndex} {onAnimationsLoaded} {onSkeletonLoaded} />
+        {/key}
 {/if}
