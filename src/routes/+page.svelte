@@ -9,6 +9,14 @@
 	import { settings } from '$lib/stores/settings.svelte';
 	import * as THREE from 'three';
 
+	function createRenderer(canvas: HTMLCanvasElement) {
+		return new THREE.WebGLRenderer({
+			canvas,
+			antialias: true,
+			preserveDrawingBuffer: true
+		});
+	}
+
 	let avatarUrl = $state('');
 	let isLoading = $state(false);
 	let canvasElement: HTMLCanvasElement | null = $state(null);
@@ -120,7 +128,7 @@
 <div class="app">
 	{#if browser}
 		<div class="canvas-container">
-			<Canvas>
+			<Canvas {createRenderer}>
 				<PhotoRoom
 					{avatarUrl}
 					{animationIndex}
