@@ -3,7 +3,9 @@
 	import { browser } from '$app/environment';
 	import PhotoRoom from '$lib/components/PhotoRoom.svelte';
 	import ControlPanel from '$lib/components/ControlPanel.svelte';
+	import SettingsPanel from '$lib/components/SettingsPanel.svelte';
 	import { inventory } from '$lib/stores/inventory.svelte';
+	import { settings } from '$lib/stores/settings.svelte';
 	import * as THREE from 'three';
 
 	let avatarUrl = $state('');
@@ -14,14 +16,16 @@
 	let hasSkeleton = $state(false);
 
 	function handleUrlChange(url: string) {
-		if (!url.trim()) return;
+		const trimmedUrl = url.trim();
+		if (!trimmedUrl || trimmedUrl === avatarUrl) return;
 		isLoading = true;
-		avatarUrl = url.trim();
+		avatarUrl = trimmedUrl;
 		animations = [];
 		animationIndex = 0;
 		hasSkeleton = false;
-		// Clear equipped items when loading a new avatar
-		inventory.clearAll();
+		if (!settings.persistInventory) {
+			inventory.clearAll();
+		}
 		setTimeout(() => {
 			isLoading = false;
 		}, 2000);
@@ -87,6 +91,8 @@
 		onAnimationChange={handleAnimationChange}
 		{hasSkeleton}
 	/>
+
+	<SettingsPanel />
 </div>
 
 <style>

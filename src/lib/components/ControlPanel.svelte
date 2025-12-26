@@ -25,6 +25,10 @@
 
 	let inputValue = $state(avatarUrl);
 
+	$effect(() => {
+		inputValue = avatarUrl;
+	});
+
 	// Rotation offsets in degrees for UI, will be converted to radians
 	let rotationX = $state(0);
 	let rotationY = $state(0);
@@ -140,7 +144,13 @@
 		<label>Avatars</label>
 		<div class="samples">
 			{#each avatars as avatar}
-				<button class="sample" onclick={() => onUrlChange(avatar.path)}>
+				{@const isSelected = avatarUrl === avatar.path}
+				<button
+					class="sample"
+					class:selected={isSelected}
+					disabled={isSelected}
+					onclick={() => onUrlChange(avatar.path)}
+				>
 					{avatar.name}
 				</button>
 			{/each}
@@ -396,8 +406,13 @@
 		background: rgba(255, 255, 255, 0.1);
 	}
 
-	.sample:hover {
+	.sample:hover:not(:disabled) {
 		background: rgba(255, 255, 255, 0.2);
+	}
+
+	.sample.selected {
+		background: var(--accent);
+		cursor: default;
 	}
 
 	.animations {
