@@ -3,12 +3,15 @@
 	import { browser } from '$app/environment';
 	import PhotoRoom from '$lib/components/PhotoRoom.svelte';
 	import ControlPanel from '$lib/components/ControlPanel.svelte';
+	import { inventory } from '$lib/stores/inventory.svelte';
+	import * as THREE from 'three';
 
 	let avatarUrl = $state('');
 	let isLoading = $state(false);
 	let canvasElement: HTMLCanvasElement | null = $state(null);
 	let animations = $state<string[]>([]);
 	let animationIndex = $state(0);
+	let hasSkeleton = $state(false);
 
 	function handleUrlChange(url: string) {
 		if (!url.trim()) return;
@@ -16,6 +19,9 @@
 		avatarUrl = url.trim();
 		animations = [];
 		animationIndex = 0;
+		hasSkeleton = false;
+		// Clear equipped items when loading a new avatar
+		inventory.clearAll();
 		setTimeout(() => {
 			isLoading = false;
 		}, 2000);
@@ -27,6 +33,13 @@
 
 	function handleAnimationChange(index: number) {
 		animationIndex = index;
+	}
+
+	function handleSkeletonLoaded(skeleton: Map<string, THREE.Bone>) {
+		hasSkeleton = skeleton.size > 0;
+		if (hasSkeleton) {
+			console.log('Skeleton loaded with bones:', Array.from(skeleton.keys()));
+		}
 	}
 
 	function takeScreenshot() {
@@ -58,6 +71,7 @@
 					{avatarUrl}
 					{animationIndex}
 					onAnimationsLoaded={handleAnimationsLoaded}
+					onSkeletonLoaded={handleSkeletonLoaded}
 				/>
 			</Canvas>
 		</div>
@@ -71,6 +85,7 @@
 		{animations}
 		{animationIndex}
 		onAnimationChange={handleAnimationChange}
+		{hasSkeleton}
 	/>
 </div>
 

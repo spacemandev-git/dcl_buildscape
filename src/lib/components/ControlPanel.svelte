@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { inventory, ITEM_CATALOG, type ItemDefinition } from '$lib/stores/inventory.svelte';
+
 	interface Props {
 		avatarUrl: string;
 		onUrlChange: (url: string) => void;
@@ -7,6 +9,7 @@
 		animations?: string[];
 		animationIndex?: number;
 		onAnimationChange?: (index: number) => void;
+		hasSkeleton?: boolean;
 	}
 
 	let {
@@ -16,10 +19,42 @@
 		isLoading = false,
 		animations = [],
 		animationIndex = 0,
-		onAnimationChange
+		onAnimationChange,
+		hasSkeleton = false
 	}: Props = $props();
 
 	let inputValue = $state(avatarUrl);
+
+	// Rotation offsets in degrees for UI, will be converted to radians
+	let rotationX = $state(0);
+	let rotationY = $state(0);
+	let rotationZ = $state(0);
+
+	// Position offsets
+	let positionX = $state(0);
+	let positionY = $state(0);
+	let positionZ = $state(0);
+
+	// Scale
+	let scaleValue = $state(0.01);
+
+	// Update inventory rotation when sliders change
+	$effect(() => {
+		const radX = (rotationX * Math.PI) / 180;
+		const radY = (rotationY * Math.PI) / 180;
+		const radZ = (rotationZ * Math.PI) / 180;
+		inventory.setRotationOverride([radX, radY, radZ]);
+	});
+
+	// Update inventory position when sliders change
+	$effect(() => {
+		inventory.setPositionOverride([positionX, positionY, positionZ]);
+	});
+
+	// Update inventory scale when slider changes
+	$effect(() => {
+		inventory.setScaleOverride(scaleValue);
+	});
 
 	const avatars = [
 		{ name: 'Adventurer', path: '/assets/Ultimate Modular Men Pack-glb/Adventurer.glb' },
@@ -35,18 +70,50 @@
 		{ name: 'Beach', path: '/assets/Ultimate Modular Men Pack-glb/Beach Character.glb' },
 	];
 
-	const items = [
-		{ name: 'Sword', path: '/assets/Ultimate RPG Items Bundle-glb/Sword.glb' },
-		{ name: 'Claymore', path: '/assets/Ultimate RPG Items Bundle-glb/Claymore.glb' },
-		{ name: 'Shield', path: '/assets/Ultimate RPG Items Bundle-glb/Shield Round.glb' },
-		{ name: 'Spear', path: '/assets/Ultimate RPG Items Bundle-glb/Spear.glb' },
-		{ name: 'Knife', path: '/assets/Ultimate RPG Items Bundle-glb/Knife.glb' },
-	];
-
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Enter') {
 			onUrlChange(inputValue);
 		}
+	}
+
+	function toggleEquip(item: ItemDefinition) {
+		if (inventory.isEquipped(item)) {
+			inventory.unequip(item.slot);
+		} else {
+			inventory.equip(item);
+		}
+	}
+
+	// Get slot display name
+	function getSlotName(slot: string): string {
+		const names: Record<string, string> = {
+			mainHand: 'Main Hand',
+			offHand: 'Off Hand',
+			back: 'Back'
+		};
+		return names[slot] || slot;
+	}
+
+	function resetRotation() {
+		rotationX = 0;
+		rotationY = 0;
+		rotationZ = 0;
+	}
+
+	function resetPosition() {
+		positionX = 0;
+		positionY = 0;
+		positionZ = 0;
+	}
+
+	function resetScale() {
+		scaleValue = 0.01;
+	}
+
+	function resetAll() {
+		resetRotation();
+		resetPosition();
+		resetScale();
 	}
 </script>
 
@@ -81,14 +148,126 @@
 	</div>
 
 	<div class="section">
-		<label>Items</label>
-		<div class="samples">
-			{#each items as item}
-				<button class="sample" onclick={() => onUrlChange(item.path)}>
-					{item.name}
-				</button>
-			{/each}
-		</div>
+		<label>Equipment {hasSkeleton ? '' : '(Load an avatar first)'}</label>
+		{#if hasSkeleton}
+			<div class="equipment-grid">
+				{#each ITEM_CATALOG as item}
+					{@const isEquipped = inventory.isEquipped(item)}
+					<button
+						class="equipment-item"
+						class:equipped={isEquipped}
+						onclick={() => toggleEquip(item)}
+						title={`${item.name} - ${getSlotName(item.slot)}`}
+					>
+						<span class="item-name">{item.name}</span>
+						<span class="item-slot">{getSlotName(item.slot)}</span>
+						{#if isEquipped}
+							<span class="equipped-badge">Equipped</span>
+						{/if}
+					</button>
+				{/each}
+			</div>
+			<div class="equipped-summary">
+				<strong>Equipped:</strong>
+				{#if inventory.equipped.mainHand || inventory.equipped.offHand || inventory.equipped.back}
+					<ul>
+						{#if inventory.equipped.mainHand}
+							<li>Main Hand: {inventory.equipped.mainHand.name}</li>
+						{/if}
+						{#if inventory.equipped.offHand}
+							<li>Off Hand: {inventory.equipped.offHand.name}</li>
+						{/if}
+						{#if inventory.equipped.back}
+							<li>Back: {inventory.equipped.back.name}</li>
+						{/if}
+					</ul>
+				{:else}
+					<span class="no-items">No items equipped</span>
+				{/if}
+			</div>
+
+			{#if inventory.equipped.mainHand || inventory.equipped.offHand || inventory.equipped.back}
+				<div class="transform-controls">
+					<div class="controls-header">
+						<strong>Transform Offset</strong>
+						<button class="reset-btn" onclick={resetAll}>Reset All</button>
+					</div>
+
+					<div class="control-group">
+						<div class="control-group-header">
+							<span>Position</span>
+							<button class="reset-btn small" onclick={resetPosition}>Reset</button>
+						</div>
+						<div class="slider-row">
+							<span class="slider-label">X</span>
+							<input type="range" min="-0.5" max="0.5" step="0.001" bind:value={positionX} />
+							<span class="slider-value">{positionX.toFixed(3)}</span>
+						</div>
+						<div class="slider-row">
+							<span class="slider-label">Y</span>
+							<input type="range" min="-0.5" max="0.5" step="0.001" bind:value={positionY} />
+							<span class="slider-value">{positionY.toFixed(3)}</span>
+						</div>
+						<div class="slider-row">
+							<span class="slider-label">Z</span>
+							<input type="range" min="-0.5" max="0.5" step="0.001" bind:value={positionZ} />
+							<span class="slider-value">{positionZ.toFixed(3)}</span>
+						</div>
+					</div>
+
+					<div class="control-group">
+						<div class="control-group-header">
+							<span>Rotation</span>
+							<button class="reset-btn small" onclick={resetRotation}>Reset</button>
+						</div>
+						<div class="slider-row">
+							<span class="slider-label">X</span>
+							<input type="range" min="-180" max="180" step="1" bind:value={rotationX} />
+							<span class="slider-value">{rotationX}°</span>
+						</div>
+						<div class="slider-row">
+							<span class="slider-label">Y</span>
+							<input type="range" min="-180" max="180" step="1" bind:value={rotationY} />
+							<span class="slider-value">{rotationY}°</span>
+						</div>
+						<div class="slider-row">
+							<span class="slider-label">Z</span>
+							<input type="range" min="-180" max="180" step="1" bind:value={rotationZ} />
+							<span class="slider-value">{rotationZ}°</span>
+						</div>
+					</div>
+
+					<div class="control-group">
+						<div class="control-group-header">
+							<span>Scale</span>
+							<button class="reset-btn small" onclick={resetScale}>Reset</button>
+						</div>
+						<div class="slider-row">
+							<span class="slider-label"></span>
+							<input type="range" min="0.0001" max="0.1" step="0.0001" bind:value={scaleValue} />
+							<span class="slider-value">{scaleValue.toFixed(4)}</span>
+						</div>
+					</div>
+
+					<div class="transform-output">
+						<div class="output-row">
+							<span>pos:</span>
+							<code>[{positionX.toFixed(3)}, {positionY.toFixed(3)}, {positionZ.toFixed(3)}]</code>
+						</div>
+						<div class="output-row">
+							<span>rot:</span>
+							<code>[{((rotationX * Math.PI) / 180).toFixed(3)}, {((rotationY * Math.PI) / 180).toFixed(3)}, {((rotationZ * Math.PI) / 180).toFixed(3)}]</code>
+						</div>
+						<div class="output-row">
+							<span>scale:</span>
+							<code>{scaleValue.toFixed(4)}</code>
+						</div>
+					</div>
+				</div>
+			{/if}
+		{:else}
+			<p class="no-skeleton-hint">Load an avatar with a skeleton to equip items</p>
+		{/if}
 	</div>
 
 	{#if animations.length > 0}
@@ -275,5 +454,195 @@
 
 	.instructions li {
 		margin-bottom: 4px;
+	}
+
+	.equipment-grid {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 8px;
+		margin-bottom: 12px;
+	}
+
+	.equipment-item {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		padding: 10px 12px;
+		background: rgba(255, 255, 255, 0.08);
+		border: 1px solid transparent;
+		text-align: left;
+		position: relative;
+	}
+
+	.equipment-item:hover {
+		background: rgba(255, 255, 255, 0.15);
+	}
+
+	.equipment-item.equipped {
+		background: rgba(99, 102, 241, 0.3);
+		border-color: var(--accent);
+	}
+
+	.item-name {
+		font-weight: 500;
+		font-size: 0.85rem;
+	}
+
+	.item-slot {
+		font-size: 0.7rem;
+		color: #888;
+		margin-top: 2px;
+	}
+
+	.equipped-badge {
+		position: absolute;
+		top: 4px;
+		right: 4px;
+		font-size: 0.6rem;
+		background: var(--accent);
+		padding: 2px 6px;
+		border-radius: 4px;
+		text-transform: uppercase;
+	}
+
+	.equipped-summary {
+		font-size: 0.8rem;
+		padding: 10px;
+		background: rgba(255, 255, 255, 0.05);
+		border-radius: 6px;
+	}
+
+	.equipped-summary ul {
+		list-style: none;
+		padding-left: 0;
+		margin: 8px 0 0;
+	}
+
+	.equipped-summary li {
+		margin-bottom: 4px;
+		color: #aaa;
+	}
+
+	.no-items {
+		color: #666;
+		font-style: italic;
+		display: block;
+		margin-top: 4px;
+	}
+
+	.no-skeleton-hint {
+		color: #666;
+		font-size: 0.8rem;
+		font-style: italic;
+		margin: 0;
+	}
+
+	.transform-controls {
+		margin-top: 12px;
+		padding: 12px;
+		background: rgba(255, 255, 255, 0.05);
+		border-radius: 8px;
+	}
+
+	.controls-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 12px;
+	}
+
+	.control-group {
+		margin-bottom: 12px;
+	}
+
+	.control-group-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 6px;
+		font-size: 0.75rem;
+		color: #888;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.reset-btn {
+		padding: 4px 10px;
+		font-size: 0.7rem;
+		background: rgba(255, 255, 255, 0.1);
+	}
+
+	.reset-btn.small {
+		padding: 2px 6px;
+		font-size: 0.6rem;
+	}
+
+	.slider-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-bottom: 6px;
+	}
+
+	.slider-label {
+		width: 16px;
+		font-size: 0.8rem;
+		font-weight: 600;
+		color: #888;
+	}
+
+	.slider-row input[type="range"] {
+		flex: 1;
+		height: 4px;
+		-webkit-appearance: none;
+		appearance: none;
+		background: rgba(255, 255, 255, 0.2);
+		border-radius: 2px;
+		cursor: pointer;
+	}
+
+	.slider-row input[type="range"]::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 14px;
+		height: 14px;
+		background: var(--accent);
+		border-radius: 50%;
+		cursor: pointer;
+	}
+
+	.slider-value {
+		width: 45px;
+		font-size: 0.75rem;
+		text-align: right;
+		color: #aaa;
+	}
+
+	.transform-output {
+		margin-top: 8px;
+		padding: 8px;
+		background: rgba(0, 0, 0, 0.3);
+		border-radius: 4px;
+		font-size: 0.7rem;
+	}
+
+	.output-row {
+		display: flex;
+		gap: 8px;
+		margin-bottom: 4px;
+	}
+
+	.output-row:last-child {
+		margin-bottom: 0;
+	}
+
+	.output-row span {
+		color: #888;
+		width: 28px;
+	}
+
+	.output-row code {
+		color: #7dd3fc;
+		font-family: monospace;
 	}
 </style>

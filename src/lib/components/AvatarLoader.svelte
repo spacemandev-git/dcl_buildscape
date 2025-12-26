@@ -3,6 +3,8 @@
 	import { useGltf } from '@threlte/extras';
 	import { untrack } from 'svelte';
 	import * as THREE from 'three';
+	import ItemAttachment from './ItemAttachment.svelte';
+	import { inventory, findBone, type ItemDefinition } from '$lib/stores/inventory.svelte';
 
 	interface Props {
 		url: string;
@@ -11,6 +13,7 @@
 		scale?: number;
 		animationIndex?: number;
 		onAnimationsLoaded?: (names: string[]) => void;
+		onSkeletonLoaded?: (skeleton: Map<string, THREE.Bone>) => void;
 	}
 
 	let {
@@ -19,7 +22,8 @@
 		rotation = [0, 0, 0],
 		scale = 1,
 		animationIndex = 0,
-		onAnimationsLoaded
+		onAnimationsLoaded,
+		onSkeletonLoaded
 	}: Props = $props();
 
 	let gltf = useGltf(url);
@@ -28,6 +32,8 @@
 	let currentUrl = '';
 	let animations: THREE.AnimationClip[] = [];
 	let lastAnimIndex = -1;
+	let skeleton = $state<Map<string, THREE.Bone>>(new Map());
+	let equippedItems = $derived(inventory.getEquippedItems());
 
 	// Set up shadows and animation mixer when model loads
 	$effect(() => {
@@ -38,12 +44,24 @@
 				animations = model.animations || [];
 				lastAnimIndex = -1;
 
+				// Build skeleton map for bone attachments
+				const newSkeleton = new Map<string, THREE.Bone>();
 				model.scene.traverse((child) => {
 					if (child instanceof THREE.Mesh) {
 						child.castShadow = true;
 						child.receiveShadow = true;
 					}
+					if (child instanceof THREE.Bone) {
+						newSkeleton.set(child.name, child);
+					}
 				});
+				skeleton = newSkeleton;
+
+				// Report skeleton to parent if callback provided
+				if (onSkeletonLoaded && newSkeleton.size > 0) {
+					onSkeletonLoaded(newSkeleton);
+					console.log('Available bones:', Array.from(newSkeleton.keys()));
+				}
 
 				// Set up animation mixer if model has animations
 				if (animations.length > 0) {
@@ -65,9 +83,14 @@
 						}));
 					}
 
-					// Play first animation
-					playAnimation(0);
-					lastAnimIndex = 0;
+					// Find and play idle animation by default, fallback to first
+					let idleIndex = animations.findIndex(a =>
+						a.name.toLowerCase().includes('idle')
+					);
+					if (idleIndex === -1) idleIndex = 0;
+
+					playAnimation(idleIndex);
+					lastAnimIndex = idleIndex;
 				} else {
 					mixer = null;
 					if (onAnimationsLoaded) {
@@ -117,6 +140,16 @@
 	<T.Group position={position} rotation={rotation} scale={[scale, scale, scale]}>
 		<T is={$gltf.scene} />
 	</T.Group>
+
+	<!-- Render equipped items attached to bones -->
+	{#each equippedItems as { item, boneName } (item.path)}
+		{@const bone = findBone(skeleton, boneName)}
+		{#if bone}
+			<ItemAttachment {item} {bone} />
+		{:else}
+			{@const _ = console.log('Bone not found:', boneName, 'for item:', item.name)}
+		{/if}
+	{/each}
 {:else}
 	<!-- Loading placeholder -->
 	<T.Mesh position={position}>

@@ -2,14 +2,16 @@
 	import { T } from '@threlte/core';
 	import { OrbitControls, Grid } from '@threlte/extras';
 	import AvatarLoader from './AvatarLoader.svelte';
+	import * as THREE from 'three';
 
 	interface Props {
 		avatarUrl: string;
 		animationIndex?: number;
 		onAnimationsLoaded?: (names: string[]) => void;
+		onSkeletonLoaded?: (skeleton: Map<string, THREE.Bone>) => void;
 	}
 
-	let { avatarUrl, animationIndex = 0, onAnimationsLoaded }: Props = $props();
+	let { avatarUrl, animationIndex = 0, onAnimationsLoaded, onSkeletonLoaded }: Props = $props();
 </script>
 
 <!-- Camera with orbit controls -->
@@ -72,5 +74,5 @@
 
 <!-- Avatar -->
 {#if avatarUrl}
-	<AvatarLoader url={avatarUrl} {animationIndex} {onAnimationsLoaded} />
+	<AvatarLoader url={avatarUrl} {animationIndex} {onAnimationsLoaded} {onSkeletonLoaded} />
 {/if}

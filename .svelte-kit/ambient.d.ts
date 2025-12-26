@@ -43,6 +43,7 @@ declare module '$env/static/private' {
 	export const VSCODE_PYTHON_AUTOACTIVATE_GUARD: string;
 	export const MallocNanoZone: string;
 	export const ZDOTDIR: string;
+	export const VIPSHOME: string;
 	export const npm_config_local_prefix: string;
 	export const ZSH: string;
 	export const ENABLE_IDE_INTEGRATION: string;
@@ -155,6 +156,7 @@ declare module '$env/dynamic/private' {
 		VSCODE_PYTHON_AUTOACTIVATE_GUARD: string;
 		MallocNanoZone: string;
 		ZDOTDIR: string;
+		VIPSHOME: string;
 		npm_config_local_prefix: string;
 		ZSH: string;
 		ENABLE_IDE_INTEGRATION: string;
