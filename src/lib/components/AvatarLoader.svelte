@@ -12,6 +12,7 @@
 		rotation?: [number, number, number];
 		scale?: number;
 		animationIndex?: number;
+		paused?: boolean;
 		onAnimationsLoaded?: (names: string[]) => void;
 		onSkeletonLoaded?: (skeleton: Map<string, THREE.Bone>) => void;
 	}
@@ -22,6 +23,7 @@
 		rotation = [0, 0, 0],
 		scale = 1,
 		animationIndex = 0,
+		paused = false,
 		onAnimationsLoaded,
 		onSkeletonLoaded
 	}: Props = $props();
@@ -130,7 +132,7 @@
 
 	// Update animation mixer
 	useTask((delta) => {
-		if (mixer) {
+		if (mixer && !paused) {
 			mixer.update(delta);
 		}
 	});

@@ -4,7 +4,6 @@
 	interface Props {
 		avatarUrl: string;
 		onUrlChange: (url: string) => void;
-		onScreenshot: () => void;
 		isLoading?: boolean;
 		animations?: string[];
 		animationIndex?: number;
@@ -15,7 +14,6 @@
 	let {
 		avatarUrl,
 		onUrlChange,
-		onScreenshot,
 		isLoading = false,
 		animations = [],
 		animationIndex = 0,
@@ -24,6 +22,7 @@
 	}: Props = $props();
 
 	let inputValue = $state(avatarUrl);
+	let bodyType = $state<'A' | 'B'>('A');
 
 	$effect(() => {
 		inputValue = avatarUrl;
@@ -60,7 +59,7 @@
 		inventory.setScaleOverride(scaleValue);
 	});
 
-	const avatars = [
+	const avatarsTypeA = [
 		{ name: 'Adventurer', path: '/assets/Ultimate Modular Men Pack-glb/Adventurer.glb' },
 		{ name: 'Astronaut', path: '/assets/Ultimate Modular Men Pack-glb/Astronaut.glb' },
 		{ name: 'Business Man', path: '/assets/Ultimate Modular Men Pack-glb/Business Man.glb' },
@@ -73,6 +72,19 @@
 		{ name: 'Farmer', path: '/assets/Ultimate Modular Men Pack-glb/Farmer.glb' },
 		{ name: 'Beach', path: '/assets/Ultimate Modular Men Pack-glb/Beach Character.glb' },
 	];
+
+	const avatarsTypeB = [
+		{ name: 'Adventurer', path: '/assets/Ultimate Modular Women Pack-glb/Adventurer.glb' },
+		{ name: 'Medieval', path: '/assets/Ultimate Modular Women Pack-glb/Medieval.glb' },
+		{ name: 'Punk', path: '/assets/Ultimate Modular Women Pack-glb/Punk.glb' },
+		{ name: 'Sci-Fi', path: '/assets/Ultimate Modular Women Pack-glb/Sci Fi Character.glb' },
+		{ name: 'Soldier', path: '/assets/Ultimate Modular Women Pack-glb/Soldier.glb' },
+		{ name: 'Suit', path: '/assets/Ultimate Modular Women Pack-glb/Suit.glb' },
+		{ name: 'Witch', path: '/assets/Ultimate Modular Women Pack-glb/Witch.glb' },
+		{ name: 'Worker', path: '/assets/Ultimate Modular Women Pack-glb/Worker.glb' },
+	];
+
+	const avatars = $derived(bodyType === 'A' ? avatarsTypeA : avatarsTypeB);
 
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Enter') {
@@ -136,6 +148,26 @@
 			/>
 			<button onclick={() => onUrlChange(inputValue)} disabled={isLoading}>
 				{isLoading ? 'Loading...' : 'Load'}
+			</button>
+		</div>
+	</div>
+
+	<div class="section">
+		<label>Body Type</label>
+		<div class="body-type-toggle">
+			<button
+				class="body-type-btn"
+				class:active={bodyType === 'A'}
+				onclick={() => (bodyType = 'A')}
+			>
+				Type A
+			</button>
+			<button
+				class="body-type-btn"
+				class:active={bodyType === 'B'}
+				onclick={() => (bodyType = 'B')}
+			>
+				Type B
 			</button>
 		</div>
 	</div>
@@ -297,17 +329,6 @@
 		</div>
 	{/if}
 
-	<div class="section">
-		<button class="screenshot-btn" onclick={onScreenshot}>
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-				<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-				<circle cx="12" cy="13" r="4"/>
-				<line x1="12" y1="3" x2="12" y2="5"/>
-			</svg>
-			Take Screenshot
-		</button>
-	</div>
-
 	<div class="instructions">
 		<p><strong>Controls:</strong></p>
 		<ul>
@@ -415,6 +436,28 @@
 		cursor: default;
 	}
 
+	.body-type-toggle {
+		display: flex;
+		gap: 8px;
+	}
+
+	.body-type-btn {
+		flex: 1;
+		padding: 8px 12px;
+		font-size: 0.85rem;
+		background: rgba(255, 255, 255, 0.1);
+		border: 1px solid transparent;
+	}
+
+	.body-type-btn:hover:not(.active) {
+		background: rgba(255, 255, 255, 0.2);
+	}
+
+	.body-type-btn.active {
+		background: var(--accent);
+		border-color: var(--accent);
+	}
+
 	.animations {
 		display: flex;
 		flex-direction: column;
@@ -439,15 +482,6 @@
 
 	.anim-btn.active {
 		background: var(--accent);
-	}
-
-	.screenshot-btn {
-		width: 100%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 8px;
-		padding: 12px;
 	}
 
 	.instructions {

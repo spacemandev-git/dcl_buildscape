@@ -7,11 +7,12 @@
 	interface Props {
 		avatarUrl: string;
 		animationIndex?: number;
+		paused?: boolean;
 		onAnimationsLoaded?: (names: string[]) => void;
 		onSkeletonLoaded?: (skeleton: Map<string, THREE.Bone>) => void;
 	}
 
-	let { avatarUrl, animationIndex = 0, onAnimationsLoaded, onSkeletonLoaded }: Props = $props();
+	let { avatarUrl, animationIndex = 0, paused = false, onAnimationsLoaded, onSkeletonLoaded }: Props = $props();
 </script>
 
 <!-- Camera with orbit controls -->
@@ -75,6 +76,6 @@
 <!-- Avatar -->
 {#if avatarUrl}
         {#key avatarUrl}
-                <AvatarLoader url={avatarUrl} {animationIndex} {onAnimationsLoaded} {onSkeletonLoaded} />
+                <AvatarLoader url={avatarUrl} {animationIndex} {paused} {onAnimationsLoaded} {onSkeletonLoaded} />
         {/key}
 {/if}

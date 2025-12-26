@@ -14,6 +14,7 @@
 	let animations = $state<string[]>([]);
 	let animationIndex = $state(0);
 	let hasSkeleton = $state(false);
+	let paused = $state(false);
 
 	function handleUrlChange(url: string) {
 		const trimmedUrl = url.trim();
@@ -74,6 +75,7 @@
 				<PhotoRoom
 					{avatarUrl}
 					{animationIndex}
+					{paused}
 					onAnimationsLoaded={handleAnimationsLoaded}
 					onSkeletonLoaded={handleSkeletonLoaded}
 				/>
@@ -84,7 +86,6 @@
 	<ControlPanel
 		{avatarUrl}
 		onUrlChange={handleUrlChange}
-		onScreenshot={takeScreenshot}
 		{isLoading}
 		{animations}
 		{animationIndex}
@@ -92,7 +93,12 @@
 		{hasSkeleton}
 	/>
 
-	<SettingsPanel />
+	<SettingsPanel
+		{paused}
+		onTogglePause={() => (paused = !paused)}
+		onUnequipAll={() => inventory.clearAll()}
+		onScreenshot={takeScreenshot}
+	/>
 </div>
 
 <style>

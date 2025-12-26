@@ -1,16 +1,56 @@
 <script lang="ts">
 	import { settings } from '$lib/stores/settings.svelte';
 
+	interface Props {
+		paused?: boolean;
+		onTogglePause?: () => void;
+		onUnequipAll?: () => void;
+		onScreenshot?: () => void;
+	}
+
+	let { paused = false, onTogglePause, onUnequipAll, onScreenshot }: Props = $props();
+
 	let isOpen = $state(false);
 </script>
 
 <div class="settings-container">
-	<button class="settings-toggle" onclick={() => (isOpen = !isOpen)} title="Settings">
-		<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-			<circle cx="12" cy="12" r="3"/>
-			<path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-		</svg>
-	</button>
+	<div class="button-row">
+		<button class="action-btn" onclick={onScreenshot} title="Take Screenshot">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+				<circle cx="12" cy="13" r="4"/>
+				<line x1="12" y1="3" x2="12" y2="5"/>
+			</svg>
+			<span>Screenshot</span>
+		</button>
+		<button class="action-btn" onclick={onUnequipAll} title="Unequip All">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+			</svg>
+			<span>Unequip</span>
+		</button>
+		<button class="action-btn" class:active={paused} onclick={onTogglePause} title={paused ? 'Play Animation' : 'Pause Animation'}>
+			{#if paused}
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<polygon points="5 3 19 12 5 21 5 3"/>
+				</svg>
+				<span>Play</span>
+			{:else}
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<rect x="6" y="4" width="4" height="16"/>
+					<rect x="14" y="4" width="4" height="16"/>
+				</svg>
+				<span>Pause</span>
+			{/if}
+		</button>
+		<button class="action-btn" onclick={() => (isOpen = !isOpen)} title="Settings">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<circle cx="12" cy="12" r="3"/>
+				<path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+			</svg>
+			<span>Settings</span>
+		</button>
+	</div>
 
 	{#if isOpen}
 		<div class="settings-panel">
@@ -41,13 +81,18 @@
 		z-index: 100;
 	}
 
-	.settings-toggle {
-		width: 44px;
-		height: 44px;
-		padding: 0;
+	.button-row {
 		display: flex;
+		gap: 8px;
+	}
+
+	.action-btn {
+		padding: 8px 12px;
+		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
+		gap: 4px;
 		background: var(--panel-bg);
 		border: 1px solid var(--border);
 		border-radius: 10px;
@@ -55,10 +100,16 @@
 		cursor: pointer;
 		backdrop-filter: blur(10px);
 		transition: background 0.2s;
+		font-size: 0.7rem;
 	}
 
-	.settings-toggle:hover {
+	.action-btn:hover {
 		background: rgba(255, 255, 255, 0.15);
+	}
+
+	.action-btn.active {
+		background: var(--accent);
+		border-color: var(--accent);
 	}
 
 	.settings-panel {
