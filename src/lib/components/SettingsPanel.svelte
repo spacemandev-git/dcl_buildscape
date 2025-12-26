@@ -2,13 +2,11 @@
 	import { settings } from '$lib/stores/settings.svelte';
 
 	interface Props {
-		paused?: boolean;
-		onTogglePause?: () => void;
 		onUnequipAll?: () => void;
 		onScreenshot?: () => void;
 	}
 
-	let { paused = false, onTogglePause, onUnequipAll, onScreenshot }: Props = $props();
+	let { onUnequipAll, onScreenshot }: Props = $props();
 
 	let isOpen = $state(false);
 </script>
@@ -28,20 +26,6 @@
 				<path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
 			</svg>
 			<span>Unequip</span>
-		</button>
-		<button class="action-btn" class:active={paused} onclick={onTogglePause} title={paused ? 'Play Animation' : 'Pause Animation'}>
-			{#if paused}
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<polygon points="5 3 19 12 5 21 5 3"/>
-				</svg>
-				<span>Play</span>
-			{:else}
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<rect x="6" y="4" width="4" height="16"/>
-					<rect x="14" y="4" width="4" height="16"/>
-				</svg>
-				<span>Pause</span>
-			{/if}
 		</button>
 		<button class="action-btn" onclick={() => (isOpen = !isOpen)} title="Settings">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

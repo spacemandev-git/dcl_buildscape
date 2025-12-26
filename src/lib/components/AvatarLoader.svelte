@@ -13,8 +13,13 @@
 		scale?: number;
 		animationIndex?: number;
 		paused?: boolean;
+		scrubTime?: number | null;
+		restartTrigger?: number;
+		cycling?: boolean;
 		onAnimationsLoaded?: (names: string[]) => void;
 		onSkeletonLoaded?: (skeleton: Map<string, THREE.Bone>) => void;
+		onTimeUpdate?: (time: number, duration: number) => void;
+		onAnimationEnd?: () => void;
 	}
 
 	let {
@@ -24,8 +29,13 @@
 		scale = 1,
 		animationIndex = 0,
 		paused = false,
+		scrubTime = null,
+		restartTrigger = 0,
+		cycling = false,
 		onAnimationsLoaded,
-		onSkeletonLoaded
+		onSkeletonLoaded,
+		onTimeUpdate,
+		onAnimationEnd
 	}: Props = $props();
 
 	let gltf = useGltf(url);
@@ -34,6 +44,7 @@
 	let currentUrl = '';
 	let animations: THREE.AnimationClip[] = [];
 	let lastAnimIndex = -1;
+	let lastRestartTrigger = 0;
 	let skeleton = $state<Map<string, THREE.Bone>>(new Map());
 	let equippedItems = $derived(inventory.getEquippedItems());
 
@@ -69,6 +80,22 @@
 				if (animations.length > 0) {
 					mixer = new THREE.AnimationMixer(model.scene);
 
+					// Listen for animation finished event
+					mixer.addEventListener('finished', () => {
+						if (onAnimationEnd) {
+							onAnimationEnd();
+						}
+					});
+
+					// Reorder animations to put idle first
+					const idleIndex = animations.findIndex(a =>
+						a.name.toLowerCase().includes('idle')
+					);
+					if (idleIndex > 0) {
+						const idle = animations.splice(idleIndex, 1)[0];
+						animations.unshift(idle);
+					}
+
 					// Report animation names to parent (cleaned up)
 					if (onAnimationsLoaded) {
 						onAnimationsLoaded(animations.map((a, i) => {
@@ -85,14 +112,9 @@
 						}));
 					}
 
-					// Find and play idle animation by default, fallback to first
-					let idleIndex = animations.findIndex(a =>
-						a.name.toLowerCase().includes('idle')
-					);
-					if (idleIndex === -1) idleIndex = 0;
-
-					playAnimation(idleIndex);
-					lastAnimIndex = idleIndex;
+					// Play first animation (idle if found, otherwise first in list)
+					playAnimation(0);
+					lastAnimIndex = 0;
 				} else {
 					mixer = null;
 					if (onAnimationsLoaded) {
@@ -115,6 +137,40 @@
 		}
 	});
 
+	// Handle scrub time changes
+	$effect(() => {
+		const time = scrubTime;
+		if (time !== null && currentAction && mixer) {
+			untrack(() => {
+				currentAction!.time = time;
+				mixer!.update(0);
+			});
+		}
+	});
+
+	// Handle restart trigger
+	$effect(() => {
+		const trigger = restartTrigger;
+		if (trigger !== lastRestartTrigger && currentAction && mixer) {
+			untrack(() => {
+				lastRestartTrigger = trigger;
+				currentAction!.reset();
+				currentAction!.play();
+			});
+		}
+	});
+
+	// Handle cycling changes - set loop mode
+	$effect(() => {
+		const isCycling = cycling;
+		if (currentAction) {
+			untrack(() => {
+				currentAction!.setLoop(isCycling ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
+				currentAction!.clampWhenFinished = isCycling;
+			});
+		}
+	});
+
 	function playAnimation(index: number) {
 		if (!mixer || !animations[index]) return;
 
@@ -126,14 +182,23 @@
 		// Play new animation
 		currentAction = mixer.clipAction(animations[index]);
 		currentAction.reset();
+		currentAction.setLoop(cycling ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
+		currentAction.clampWhenFinished = cycling;
 		currentAction.fadeIn(0.3);
 		currentAction.play();
 	}
 
 	// Update animation mixer
 	useTask((delta) => {
-		if (mixer && !paused) {
+		if (mixer && !paused && scrubTime === null) {
 			mixer.update(delta);
+		}
+		// Report current time
+		if (currentAction && onTimeUpdate) {
+			const clip = animations[lastAnimIndex];
+			if (clip) {
+				onTimeUpdate(currentAction.time, clip.duration);
+			}
 		}
 	});
 </script>

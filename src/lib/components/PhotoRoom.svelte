@@ -8,11 +8,16 @@
 		avatarUrl: string;
 		animationIndex?: number;
 		paused?: boolean;
+		scrubTime?: number | null;
+		restartTrigger?: number;
+		cycling?: boolean;
 		onAnimationsLoaded?: (names: string[]) => void;
 		onSkeletonLoaded?: (skeleton: Map<string, THREE.Bone>) => void;
+		onTimeUpdate?: (time: number, duration: number) => void;
+		onAnimationEnd?: () => void;
 	}
 
-	let { avatarUrl, animationIndex = 0, paused = false, onAnimationsLoaded, onSkeletonLoaded }: Props = $props();
+	let { avatarUrl, animationIndex = 0, paused = false, scrubTime = null, restartTrigger = 0, cycling = false, onAnimationsLoaded, onSkeletonLoaded, onTimeUpdate, onAnimationEnd }: Props = $props();
 </script>
 
 <!-- Camera with orbit controls -->
@@ -76,6 +81,6 @@
 <!-- Avatar -->
 {#if avatarUrl}
         {#key avatarUrl}
-                <AvatarLoader url={avatarUrl} {animationIndex} {paused} {onAnimationsLoaded} {onSkeletonLoaded} />
+                <AvatarLoader url={avatarUrl} {animationIndex} {paused} {scrubTime} {restartTrigger} {cycling} {onAnimationsLoaded} {onSkeletonLoaded} {onTimeUpdate} {onAnimationEnd} />
         {/key}
 {/if}

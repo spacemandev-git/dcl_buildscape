@@ -4,6 +4,7 @@
 	import PhotoRoom from '$lib/components/PhotoRoom.svelte';
 	import ControlPanel from '$lib/components/ControlPanel.svelte';
 	import SettingsPanel from '$lib/components/SettingsPanel.svelte';
+	import AnimationTimeline from '$lib/components/AnimationTimeline.svelte';
 	import { inventory } from '$lib/stores/inventory.svelte';
 	import { settings } from '$lib/stores/settings.svelte';
 	import * as THREE from 'three';
@@ -15,6 +16,11 @@
 	let animationIndex = $state(0);
 	let hasSkeleton = $state(false);
 	let paused = $state(false);
+	let currentTime = $state(0);
+	let duration = $state(0);
+	let scrubTime = $state<number | null>(null);
+	let cycling = $state(false);
+	let restartTrigger = $state(0);
 
 	function handleUrlChange(url: string) {
 		const trimmedUrl = url.trim();
@@ -38,6 +44,7 @@
 
 	function handleAnimationChange(index: number) {
 		animationIndex = index;
+		scrubTime = null; // Clear scrub state when changing animation
 	}
 
 	function handleSkeletonLoaded(skeleton: Map<string, THREE.Bone>) {
@@ -45,6 +52,48 @@
 		if (hasSkeleton) {
 			console.log('Skeleton loaded with bones:', Array.from(skeleton.keys()));
 		}
+	}
+
+	function handleTimeUpdate(time: number, dur: number) {
+		if (scrubTime === null) {
+			currentTime = time;
+		}
+		duration = dur;
+	}
+
+	function handleScrub(time: number | null) {
+		scrubTime = time;
+		if (time !== null) {
+			currentTime = time;
+		}
+	}
+
+	function handleStepFrame(direction: -1 | 1) {
+		const frameTime = 1 / 30; // Assume 30fps
+		const newTime = Math.max(0, Math.min(duration, currentTime + direction * frameTime));
+		scrubTime = newTime;
+		currentTime = newTime;
+		paused = true;
+	}
+
+	function handleAnimationEnd() {
+		if (cycling && animations.length > 1) {
+			animationIndex = (animationIndex + 1) % animations.length;
+		} else {
+			paused = true;
+		}
+	}
+
+	function handleTogglePause() {
+		if (paused && currentTime >= duration - 0.01) {
+			// At end of animation, restart from beginning
+			restartTrigger++;
+		}
+		paused = !paused;
+	}
+
+	function handleToggleCycle() {
+		cycling = !cycling;
 	}
 
 	function takeScreenshot() {
@@ -76,8 +125,13 @@
 					{avatarUrl}
 					{animationIndex}
 					{paused}
+					{scrubTime}
+					{restartTrigger}
+					{cycling}
 					onAnimationsLoaded={handleAnimationsLoaded}
 					onSkeletonLoaded={handleSkeletonLoaded}
+					onTimeUpdate={handleTimeUpdate}
+					onAnimationEnd={handleAnimationEnd}
 				/>
 			</Canvas>
 		</div>
@@ -94,10 +148,19 @@
 	/>
 
 	<SettingsPanel
-		{paused}
-		onTogglePause={() => (paused = !paused)}
 		onUnequipAll={() => inventory.clearAll()}
 		onScreenshot={takeScreenshot}
+	/>
+
+	<AnimationTimeline
+		{currentTime}
+		{duration}
+		{paused}
+		{cycling}
+		onScrub={handleScrub}
+		onTogglePause={handleTogglePause}
+		onStepFrame={handleStepFrame}
+		onToggleCycle={handleToggleCycle}
 	/>
 </div>
 
